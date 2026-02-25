@@ -1,0 +1,158 @@
+{
+  "project_name": "Maroon & Beige Leads Manager",
+  "design_philosophy": {
+    "identity": "The Estate Architect",
+    "vibe": "Old Money Modern. Precise, warm, authoritative, and uncluttered.",
+    "core_principle": "Data as Art. Even a simple list of leads should feel like a guest list for a gala.",
+    "emotional_tone": "Exclusive, Trustworthy, Professional"
+  },
+  "typography": {
+    "font_family": {
+      "heading": "Playfair Display, serif",
+      "body": "Manrope, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "import_url": "https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap",
+    "usage": {
+      "headings": "Use Playfair Display for all h1, h2, h3. Weight: 600 or 700. Tracking: tight.",
+      "body": "Use Manrope for all standard text. Weight: 400. Leading: relaxed.",
+      "labels": "Use Manrope Uppercase for table headers and form labels. Tracking: wide (0.05em). Weight: 600."
+    }
+  },
+  "colors": {
+    "palette": {
+      "primary": {
+        "hex": "#6E0901",
+        "hsl": "3 98% 22%",
+        "usage": "Main buttons, active states, sidebar background, brand accents"
+      },
+      "background": {
+        "hex": "#F5F5DC",
+        "hsl": "60 56% 96%",
+        "usage": "Global page background"
+      },
+      "card": {
+        "hex": "#FFFAF0",
+        "hsl": "40 100% 97%",
+        "usage": "Table containers, cards, form backgrounds (Floral White)"
+      },
+      "text": {
+        "primary": "#1A1A1A",
+        "secondary": "#5C5C5C",
+        "muted": "#8A8A8A"
+      },
+      "accent": {
+        "hex": "#C5A059",
+        "hsl": "40 48% 56%",
+        "usage": "Focus rings, subtle highlights, borders"
+      },
+      "status": {
+        "success": "#2D6A4F",
+        "error": "#9B2226",
+        "warning": "#E9C46A"
+      }
+    },
+    "tailwind_config_override": {
+      "css_vars": {
+        "root": {
+          "--background": "60 56% 96%",
+          "--foreground": "0 0% 10%",
+          "--card": "40 100% 97%",
+          "--card-foreground": "0 0% 10%",
+          "--popover": "40 100% 97%",
+          "--popover-foreground": "0 0% 10%",
+          "--primary": "3 98% 22%",
+          "--primary-foreground": "60 56% 96%",
+          "--secondary": "40 20% 90%",
+          "--secondary-foreground": "3 98% 22%",
+          "--muted": "40 20% 85%",
+          "--muted-foreground": "0 0% 40%",
+          "--accent": "40 48% 56%",
+          "--accent-foreground": "0 0% 10%",
+          "--destructive": "0 84.2% 60.2%",
+          "--destructive-foreground": "60 56% 96%",
+          "--border": "40 20% 82%",
+          "--input": "40 20% 82%",
+          "--ring": "3 98% 22%",
+          "--radius": "0px"
+        }
+      }
+    }
+  },
+  "layout_strategy": {
+    "general": {
+      "spacing": "Generous. Use p-8 or p-12 for main containers. Avoid cramped lists.",
+      "container": "Max-width 1400px centered. Not full fluid.",
+      "radius": "Sharp edges (0px or 2px) to match the 'Brutalist/Lux' vibe. No rounded-xl."
+    },
+    "pages": {
+      "public_leads": {
+        "structure": "Single column, elegant header. Table is the hero. Use a 'Paper' texture or subtle border.",
+        "header": "Centered, Serif, large (text-5xl). Subtitle in Sans.",
+        "table": "Minimalist. No vertical borders. Bold bottom border on headers. Row hover: subtle beige darken."
+      },
+      "admin_login": {
+        "structure": "Split screen (50/50 on desktop).",
+        "left": "Deep Maroon background with the architectural image overlay (multiply blend mode).",
+        "right": "Beige background, centered form. Clean, sharp inputs."
+      },
+      "dashboard": {
+        "structure": "Sidebar Layout.",
+        "sidebar": "Fixed left, width 280px. Background: Deep Maroon. Text: White/Beige.",
+        "content": "Scrollable area. Background: Beige.",
+        "widgets": "Stats cards at top (Total Leads, Today's Leads). Main table below."
+      }
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-primary-foreground hover:bg-primary/90. Sharp corners (rounded-none or rounded-sm). Uppercase labels.",
+      "secondary": "border border-primary text-primary hover:bg-primary/10. Sharp corners.",
+      "ghost": "hover:bg-primary/5 text-primary"
+    },
+    "inputs": {
+      "style": "bg-transparent border-b-2 border-primary/20 focus:border-primary px-0 rounded-none. transition-colors. (Material/Underline style)",
+      "alt_style": "Standard shadcn input but with sharp corners and border-primary/30."
+    },
+    "table": {
+      "style": "text-base. Header: uppercase, tracking-widest, text-xs, font-bold, text-primary/70. Rows: py-4.",
+      "row_hover": "bg-primary/5 transition-colors duration-200"
+    },
+    "cards": {
+      "style": "bg-card border border-primary/10 shadow-[4px_4px_0px_0px_rgba(110,9,1,0.1)]"
+    }
+  },
+  "motion": {
+    "transitions": "transition-all duration-300 ease-out",
+    "page_load": "Fade in + slight slide up (y-4).",
+    "hover_effects": "Buttons: slight lift (-1px) + shadow increase."
+  },
+  "assets": {
+    "images": [
+      {
+        "category": "login_background",
+        "url": "https://images.unsplash.com/photo-1665760670979-708eb9626d73?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2Mzl8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBhcmNoaXRlY3R1cmFsJTIwZGV0YWlsJTIwd2FybSUyMGJlaWdlfGVufDB8fHx8MTc3MjAxNTA2OXww&ixlib=rb-4.1.0&q=85",
+        "description": "Abstract beige architectural curve for the login page sidebar."
+      }
+    ],
+    "icons": "Use Lucide React. Thin stroke (1.5px). Color: Primary or Muted Foreground."
+  },
+  "universal_guidelines": [
+    "Do NOT use gradients. Solid, rich colors only.",
+    "Do NOT use rounded corners larger than 4px. We want sharp, professional lines.",
+    "Ensure high contrast for text (Dark Charcoal on Beige).",
+    "Use 'data-testid' on all interactive elements.",
+    "All dates must be formatted cleanly (e.g., 'Oct 12, 2023' not '10/12/2023').",
+    "Loading states: Use a skeleton loader that matches the beige theme (darker beige pulse)."
+  ],
+  "instructions_to_main_agent": [
+    "1. Install necessary fonts (Manrope, Playfair Display).",
+    "2. Update tailwind.config.js to extend the theme with our colors.",
+    "3. Update index.css with the CSS variables provided.",
+    "4. Build the 'Public Leads' page first as a read-only interface.",
+    "5. Build the 'Admin Login' page next.",
+    "6. Build the 'Admin Dashboard' with the Add Lead form.",
+    "7. Mock the Google Apps Script API calls initially to ensure UI works before integration.",
+    "8. Use 'sonner' for toast notifications on success/failure."
+  ]
+}
