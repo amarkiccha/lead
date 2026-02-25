@@ -1,48 +1,62 @@
 const GOOGLE_SCRIPT_URL = process.env.REACT_APP_GOOGLE_SCRIPT_URL;
 
-// Helper to parse date from various formats
-const parseDate = (dateStr) => {
-  if (!dateStr) return null;
-  try {
-    const date = new Date(dateStr);
-    return isNaN(date.getTime()) ? null : date;
-  } catch (e) {
-    return null;
-  }
-};
-
-// Helper to extract time from ISO date string or time string
-const extractTime = (timeStr) => {
-  if (!timeStr) return null;
+// Extract time components from ISO string or time string
+const extractTimeComponents = (timeStr) => {
+  if (!timeStr) return { hours: 0, minutes: 0, seconds: 0 };
+  
   try {
     const date = new Date(timeStr);
     if (!isNaN(date.getTime())) {
-      return date;
+      return {
+        hours: date.getUTCHours(),
+        minutes: date.getUTCMinutes(),
+        seconds: date.getUTCSeconds()
+      };
     }
-    // Try parsing as time only
-    const today = new Date().toDateString();
-    const dateTime = new Date(`${today} ${timeStr}`);
-    return isNaN(dateTime.getTime()) ? null : dateTime;
+    
+    // Try parsing as HH:MM or HH:MM:SS
+    const timeParts = timeStr.split(':');
+    if (timeParts.length >= 2) {
+      return {
+        hours: parseInt(timeParts[0], 10) || 0,
+        minutes: parseInt(timeParts[1], 10) || 0,
+        seconds: parseInt(timeParts[2], 10) || 0
+      };
+    }
   } catch (e) {
-    return null;
+    console.error('Error extracting time:', e);
   }
+  
+  return { hours: 0, minutes: 0, seconds: 0 };
 };
 
-// Helper to parse date and time into a sortable timestamp
+// Parse date and combine with time for accurate timestamp
 export const parseDateTime = (dateStr, timeStr) => {
-  const date = parseDate(dateStr);
-  const time = extractTime(timeStr);
+  if (!dateStr) return 0;
   
-  if (!date) return 0;
-  
-  // If we have a time, combine date and time
-  if (time) {
-    const combined = new Date(date);
-    combined.setHours(time.getHours(), time.getMinutes(), time.getSeconds());
+  try {
+    // Parse the date
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return 0;
+    
+    // Extract time components
+    const time = extractTimeComponents(timeStr);
+    
+    // Create combined timestamp using UTC to avoid timezone issues
+    const combined = new Date(Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      time.hours,
+      time.minutes,
+      time.seconds
+    ));
+    
     return combined.getTime();
+  } catch (e) {
+    console.error('Error parsing date/time:', e);
+    return 0;
   }
-  
-  return date.getTime();
 };
 
 // Sort leads by date + time descending (latest first)
@@ -50,42 +64,51 @@ export const sortLeadsByDateTime = (leads) => {
   return [...leads].sort((a, b) => {
     const timestampA = parseDateTime(a.date, a.time);
     const timestampB = parseDateTime(b.date, b.time);
-    return timestampB - timestampA; // Descending order
+    return timestampB - timestampA; // Descending order (latest first)
   });
 };
 
-// Format date for display (e.g., "Oct 12, 2023")
+// Format date for display (e.g., "Feb 24, 2026")
 export const formatDate = (dateStr) => {
   if (!dateStr) return '-';
   
-  const date = parseDate(dateStr);
-  if (!date) return dateStr;
-  
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  });
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'UTC'
+    });
+  } catch (e) {
+    return dateStr;
+  }
 };
 
-// Format time for display (e.g., "2:30 PM")
+// Format time for display (e.g., "9:21 AM")
 export const formatTime = (timeStr) => {
   if (!timeStr) return '-';
   
-  const time = extractTime(timeStr);
-  if (!time) return timeStr;
-  
-  return time.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  });
+  try {
+    const time = extractTimeComponents(timeStr);
+    
+    // Format as 12-hour time
+    const hours12 = time.hours % 12 || 12;
+    const ampm = time.hours >= 12 ? 'PM' : 'AM';
+    const minutes = time.minutes.toString().padStart(2, '0');
+    
+    return `${hours12}:${minutes} ${ampm}`;
+  } catch (e) {
+    return timeStr;
+  }
 };
 
 // Normalize lead data from API to consistent format
-const normalizeLead = (lead) => {
+const normalizeLead = (lead, index) => {
   return {
-    id: lead.id || lead._id || Math.random().toString(36).substr(2, 9),
+    id: lead.id || lead._id || `lead-${index}`,
     name: lead.name || '',
     projectName: lead.projectName || lead.project_name || lead.project || '',
     phoneNumber: lead.phoneNumber || lead.phone_number || lead.phone || '',
@@ -129,9 +152,20 @@ export const fetchLeads = async () => {
       throw new Error(data.error);
     }
     
-    // Normalize and sort leads
-    const normalizedLeads = leads.map(normalizeLead);
-    return sortLeadsByDateTime(normalizedLeads);
+    // Normalize leads
+    const normalizedLeads = leads.map((lead, index) => normalizeLead(lead, index));
+    
+    // Sort by date + time descending
+    const sortedLeads = sortLeadsByDateTime(normalizedLeads);
+    
+    console.log('Sorted leads:', sortedLeads.map(l => ({
+      name: l.name,
+      date: l.date,
+      time: l.time,
+      timestamp: parseDateTime(l.date, l.time)
+    })));
+    
+    return sortedLeads;
   } catch (error) {
     console.error('Error fetching leads:', error);
     throw error;
