@@ -1,18 +1,48 @@
 const GOOGLE_SCRIPT_URL = process.env.REACT_APP_GOOGLE_SCRIPT_URL;
 
+// Helper to parse date from various formats
+const parseDate = (dateStr) => {
+  if (!dateStr) return null;
+  try {
+    const date = new Date(dateStr);
+    return isNaN(date.getTime()) ? null : date;
+  } catch (e) {
+    return null;
+  }
+};
+
+// Helper to extract time from ISO date string or time string
+const extractTime = (timeStr) => {
+  if (!timeStr) return null;
+  try {
+    const date = new Date(timeStr);
+    if (!isNaN(date.getTime())) {
+      return date;
+    }
+    // Try parsing as time only
+    const today = new Date().toDateString();
+    const dateTime = new Date(`${today} ${timeStr}`);
+    return isNaN(dateTime.getTime()) ? null : dateTime;
+  } catch (e) {
+    return null;
+  }
+};
+
 // Helper to parse date and time into a sortable timestamp
 export const parseDateTime = (dateStr, timeStr) => {
-  if (!dateStr) return 0;
+  const date = parseDate(dateStr);
+  const time = extractTime(timeStr);
   
-  try {
-    // Combine date and time
-    const dateTimeStr = timeStr ? `${dateStr} ${timeStr}` : dateStr;
-    const date = new Date(dateTimeStr);
-    return isNaN(date.getTime()) ? 0 : date.getTime();
-  } catch (e) {
-    console.error('Error parsing date/time:', e);
-    return 0;
+  if (!date) return 0;
+  
+  // If we have a time, combine date and time
+  if (time) {
+    const combined = new Date(date);
+    combined.setHours(time.getHours(), time.getMinutes(), time.getSeconds());
+    return combined.getTime();
   }
+  
+  return date.getTime();
 };
 
 // Sort leads by date + time descending (latest first)
@@ -28,42 +58,45 @@ export const sortLeadsByDateTime = (leads) => {
 export const formatDate = (dateStr) => {
   if (!dateStr) return '-';
   
-  try {
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return dateStr;
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  } catch (e) {
-    return dateStr;
-  }
+  const date = parseDate(dateStr);
+  if (!date) return dateStr;
+  
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
 };
 
 // Format time for display (e.g., "2:30 PM")
 export const formatTime = (timeStr) => {
   if (!timeStr) return '-';
   
-  try {
-    // Handle various time formats
-    const today = new Date().toDateString();
-    const dateTime = new Date(`${today} ${timeStr}`);
-    if (isNaN(dateTime.getTime())) return timeStr;
-    return dateTime.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  } catch (e) {
-    return timeStr;
-  }
+  const time = extractTime(timeStr);
+  if (!time) return timeStr;
+  
+  return time.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
 };
 
-// Fetch all leads from Google Apps Script using fetch with redirect follow
+// Normalize lead data from API to consistent format
+const normalizeLead = (lead) => {
+  return {
+    id: lead.id || lead._id || Math.random().toString(36).substr(2, 9),
+    name: lead.name || '',
+    projectName: lead.projectName || lead.project_name || lead.project || '',
+    phoneNumber: lead.phoneNumber || lead.phone_number || lead.phone || '',
+    date: lead.date || '',
+    time: lead.time || ''
+  };
+};
+
+// Fetch all leads from Google Apps Script
 export const fetchLeads = async () => {
   try {
-    // Use fetch with redirect: 'follow' which is important for Google Apps Script
     const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getLeads`, {
       method: 'GET',
       redirect: 'follow',
@@ -96,8 +129,9 @@ export const fetchLeads = async () => {
       throw new Error(data.error);
     }
     
-    // Sort by date + time descending
-    return sortLeadsByDateTime(leads);
+    // Normalize and sort leads
+    const normalizedLeads = leads.map(normalizeLead);
+    return sortLeadsByDateTime(normalizedLeads);
   } catch (error) {
     console.error('Error fetching leads:', error);
     throw error;
@@ -108,12 +142,11 @@ export const fetchLeads = async () => {
 export const addLead = async (leadData) => {
   try {
     // Build URL with parameters for Google Apps Script
-    // Using GET with parameters since Google Apps Script handles it better for CORS
     const params = new URLSearchParams({
       action: 'addLead',
       name: leadData.name,
-      projectName: leadData.projectName,
-      phoneNumber: leadData.phoneNumber,
+      project: leadData.projectName,
+      phone: leadData.phoneNumber,
       date: leadData.date,
       time: leadData.time
     });
