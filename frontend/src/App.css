@@ -1,34 +1,83 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
-}
-
-.App-header {
-    background-color: #0f0f10;
+/* App-specific styles */
+.App {
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
 }
 
-.App-link {
-    color: #61dafb;
+/* Table styling */
+.leads-table th {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: hsl(var(--primary) / 0.7);
+    border-bottom: 2px solid hsl(var(--primary) / 0.2);
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+.leads-table tr:hover {
+    background-color: hsl(var(--primary) / 0.05);
+}
+
+/* Login split screen */
+.login-image-side {
+    background-color: #6E0901;
+    background-blend-mode: multiply;
+}
+
+/* Sidebar styling */
+.admin-sidebar {
+    background-color: #6E0901;
+}
+
+.admin-sidebar a:hover,
+.admin-sidebar button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Input underline style */
+.input-underline {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid hsl(var(--primary) / 0.2);
+    border-radius: 0;
+    padding-left: 0;
+    padding-right: 0;
+    transition: border-color 0.3s ease;
+}
+
+.input-underline:focus {
+    border-bottom-color: hsl(var(--primary));
+    outline: none;
+    box-shadow: none;
+}
+
+/* Button styles */
+.btn-primary-sharp {
+    border-radius: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary-sharp:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(110, 9, 1, 0.3);
+}
+
+/* Card with shadow */
+.card-sharp {
+    border-radius: 0;
+    box-shadow: 4px 4px 0px 0px rgba(110, 9, 1, 0.1);
+}
+
+/* Page transitions */
+.page-enter {
+    opacity: 0;
+    transform: translateY(16px);
+}
+
+.page-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
 }
