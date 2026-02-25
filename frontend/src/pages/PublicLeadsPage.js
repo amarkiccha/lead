@@ -116,11 +116,38 @@ const PublicLeadsPage = () => {
               </Button>
             </div>
           ) : leads.length === 0 ? (
-            <div className="p-12 text-center">
-              <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" strokeWidth={1} />
-              <p className="text-muted-foreground font-body" data-testid="no-leads-message">
-                No leads found yet.
-              </p>
+            <div>
+              <Table className="leads-table" data-testid="leads-table">
+                <TableHeader>
+                  <TableRow className="border-b-2 border-primary/20 hover:bg-transparent">
+                    <TableHead className="font-body uppercase tracking-widest text-xs font-semibold text-primary/70 py-4">
+                      Name
+                    </TableHead>
+                    <TableHead className="font-body uppercase tracking-widest text-xs font-semibold text-primary/70 py-4">
+                      Project Name
+                    </TableHead>
+                    <TableHead className="font-body uppercase tracking-widest text-xs font-semibold text-primary/70 py-4">
+                      Phone Number
+                    </TableHead>
+                    <TableHead className="font-body uppercase tracking-widest text-xs font-semibold text-primary/70 py-4">
+                      Date
+                    </TableHead>
+                    <TableHead className="font-body uppercase tracking-widest text-xs font-semibold text-primary/70 py-4">
+                      Time
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-12 text-center">
+                      <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" strokeWidth={1} />
+                      <p className="text-muted-foreground font-body" data-testid="no-leads-message">
+                        No leads found yet.
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
             </div>
           ) : (
             <Table className="leads-table" data-testid="leads-table">
