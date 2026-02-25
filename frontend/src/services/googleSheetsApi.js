@@ -59,12 +59,12 @@ export const parseDateTime = (dateStr, timeStr) => {
   }
 };
 
-// Sort leads by date + time descending (latest first)
+// Sort leads by date + time ascending (oldest first, newest last)
 export const sortLeadsByDateTime = (leads) => {
   return [...leads].sort((a, b) => {
     const timestampA = parseDateTime(a.date, a.time);
     const timestampB = parseDateTime(b.date, b.time);
-    return timestampB - timestampA; // Descending order (latest first)
+    return timestampA - timestampB; // Ascending order (oldest first, newest last)
   });
 };
 
