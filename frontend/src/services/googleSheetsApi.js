@@ -8,7 +8,7 @@ export const parseDateTime = (dateStr, timeStr) => {
     // Combine date and time
     const dateTimeStr = timeStr ? `${dateStr} ${timeStr}` : dateStr;
     const date = new Date(dateTimeStr);
-    return date.getTime();
+    return isNaN(date.getTime()) ? 0 : date.getTime();
   } catch (e) {
     console.error('Error parsing date/time:', e);
     return 0;
@@ -30,6 +30,7 @@ export const formatDate = (dateStr) => {
   
   try {
     const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -48,6 +49,7 @@ export const formatTime = (timeStr) => {
     // Handle various time formats
     const today = new Date().toDateString();
     const dateTime = new Date(`${today} ${timeStr}`);
+    if (isNaN(dateTime.getTime())) return timeStr;
     return dateTime.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
@@ -58,21 +60,29 @@ export const formatTime = (timeStr) => {
   }
 };
 
-// Fetch all leads from Google Apps Script
+// Fetch all leads from Google Apps Script using fetch with redirect follow
 export const fetchLeads = async () => {
   try {
+    // Use fetch with redirect: 'follow' which is important for Google Apps Script
     const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getLeads`, {
       method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
+      redirect: 'follow',
     });
     
     if (!response.ok) {
-      throw new Error('Failed to fetch leads');
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
     
-    const data = await response.json();
+    const text = await response.text();
+    
+    // Try to parse as JSON
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (parseError) {
+      console.error('Failed to parse response as JSON:', text);
+      throw new Error('Invalid JSON response from server');
+    }
     
     // Handle different response formats from Apps Script
     let leads = [];
@@ -82,6 +92,8 @@ export const fetchLeads = async () => {
       leads = data.leads;
     } else if (data.data && Array.isArray(data.data)) {
       leads = data.data;
+    } else if (data.error) {
+      throw new Error(data.error);
     }
     
     // Sort by date + time descending
@@ -95,21 +107,39 @@ export const fetchLeads = async () => {
 // Add a new lead via Google Apps Script
 export const addLead = async (leadData) => {
   try {
-    const response = await fetch(GOOGLE_SCRIPT_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        action: 'addLead',
-        ...leadData
-      }),
-      mode: 'no-cors' // Required for Google Apps Script
+    // Build URL with parameters for Google Apps Script
+    // Using GET with parameters since Google Apps Script handles it better for CORS
+    const params = new URLSearchParams({
+      action: 'addLead',
+      name: leadData.name,
+      projectName: leadData.projectName,
+      phoneNumber: leadData.phoneNumber,
+      date: leadData.date,
+      time: leadData.time
+    });
+
+    const response = await fetch(`${GOOGLE_SCRIPT_URL}?${params.toString()}`, {
+      method: 'GET',
+      redirect: 'follow',
     });
     
-    // With no-cors, we can't read the response
-    // Assume success if no error thrown
-    return { success: true };
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const text = await response.text();
+    
+    // Try to parse response
+    try {
+      const data = JSON.parse(text);
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      return data;
+    } catch (parseError) {
+      // If we can't parse, assume success if we got a response
+      return { success: true };
+    }
   } catch (error) {
     console.error('Error adding lead:', error);
     throw error;
