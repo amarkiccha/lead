@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
@@ -8,7 +8,10 @@ import {
   Calendar as CalendarIcon,
   Clock,
   LayoutDashboard,
-  UserPlus
+  UserPlus,
+  Search,
+  Filter,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,7 +39,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
-import { fetchLeads, addLead, formatDate, formatTime } from '@/services/googleSheetsApi';
+import { fetchLeads, addLead, formatDate, formatTime, filterLeads, getUniqueProjects } from '@/services/googleSheetsApi';
 import { format } from 'date-fns';
 
 const AdminDashboard = () => {
@@ -55,16 +58,22 @@ const AdminDashboard = () => {
   });
   const [dateOpen, setDateOpen] = useState(false);
 
+  // Filter state
+  const [searchName, setSearchName] = useState('');
+  const [selectedProject, setSelectedProject] = useState('all');
+  const [filterDate, setFilterDate] = useState(null);
+  const [filterDateOpen, setFilterDateOpen] = useState(false);
+
   const navigate = useNavigate();
   const { logout } = useAuth();
 
-  // Generate time options
+  // Generate time options (HH:MM:SS format)
   const timeOptions = [];
   for (let h = 0; h < 24; h++) {
-    for (let m = 0; m < 60; m += 30) {
+    for (let m = 0; m < 60; m += 15) {
       const hour = h.toString().padStart(2, '0');
       const minute = m.toString().padStart(2, '0');
-      timeOptions.push(`${hour}:${minute}`);
+      timeOptions.push(`${hour}:${minute}:00`);
     }
   }
 
@@ -85,6 +94,27 @@ const AdminDashboard = () => {
   useEffect(() => {
     loadLeads();
   }, []);
+
+  // Get unique projects for filter dropdown
+  const projects = useMemo(() => getUniqueProjects(leads), [leads]);
+
+  // Filter leads based on search criteria
+  const filteredLeads = useMemo(() => {
+    return filterLeads(leads, {
+      searchName,
+      project: selectedProject,
+      date: filterDate
+    });
+  }, [leads, searchName, selectedProject, filterDate]);
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchName('');
+    setSelectedProject('all');
+    setFilterDate(null);
+  };
+
+  const hasActiveFilters = searchName || selectedProject !== 'all' || filterDate;
 
   const handleLogout = () => {
     logout();
@@ -111,14 +141,14 @@ const AdminDashboard = () => {
         name: formData.name,
         projectName: formData.projectName,
         phoneNumber: formData.phoneNumber,
-        date: format(formData.date, 'yyyy-MM-dd'),
+        date: format(formData.date, 'dd/MM/yyyy'),
         time: formData.time
       };
 
       await addLead(leadData);
       
       toast.success('Lead added successfully', {
-        description: 'The new lead has been saved to the system.'
+        description: 'The new lead has been saved to the sheet.'
       });
 
       // Reset form
@@ -130,7 +160,7 @@ const AdminDashboard = () => {
         time: ''
       });
 
-      // Refresh leads after a short delay (to allow Google Sheets to update)
+      // Refresh leads
       setTimeout(() => {
         loadLeads();
       }, 1500);
@@ -148,22 +178,20 @@ const AdminDashboard = () => {
   // Stats
   const totalLeads = leads.length;
   const todayLeads = leads.filter(lead => {
-    const today = new Date().toDateString();
-    const leadDate = new Date(lead.date).toDateString();
-    return today === leadDate;
+    const today = new Date();
+    const todayStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+    return formatDate(lead.date) === todayStr;
   }).length;
 
   return (
     <div className="min-h-screen flex" data-testid="admin-dashboard">
       {/* Sidebar */}
       <aside className="hidden md:flex md:w-72 flex-col admin-sidebar text-primary-foreground">
-        {/* Logo */}
         <div className="p-6 border-b border-white/10">
           <h1 className="font-heading text-2xl font-bold">Propz CRM</h1>
           <p className="text-sm text-primary-foreground/70 font-body mt-1">Admin Dashboard</p>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 p-4">
           <div className="space-y-1">
             <button
@@ -176,7 +204,6 @@ const AdminDashboard = () => {
           </div>
         </nav>
 
-        {/* Logout */}
         <div className="p-4 border-t border-white/10">
           <Button
             variant="ghost"
@@ -266,14 +293,10 @@ const AdminDashboard = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Name */}
                 <div className="space-y-2">
-                  <Label 
-                    htmlFor="name" 
-                    className="font-body uppercase tracking-widest text-xs font-semibold text-primary/70"
-                  >
+                  <Label className="font-body uppercase tracking-widest text-xs font-semibold text-primary/70">
                     Name
                   </Label>
                   <Input
-                    id="name"
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     placeholder="Enter name"
@@ -284,14 +307,10 @@ const AdminDashboard = () => {
 
                 {/* Project Name */}
                 <div className="space-y-2">
-                  <Label 
-                    htmlFor="projectName" 
-                    className="font-body uppercase tracking-widest text-xs font-semibold text-primary/70"
-                  >
+                  <Label className="font-body uppercase tracking-widest text-xs font-semibold text-primary/70">
                     Project Name
                   </Label>
                   <Input
-                    id="projectName"
                     value={formData.projectName}
                     onChange={(e) => handleInputChange('projectName', e.target.value)}
                     placeholder="Enter project name"
@@ -302,14 +321,10 @@ const AdminDashboard = () => {
 
                 {/* Phone Number */}
                 <div className="space-y-2">
-                  <Label 
-                    htmlFor="phoneNumber" 
-                    className="font-body uppercase tracking-widest text-xs font-semibold text-primary/70"
-                  >
+                  <Label className="font-body uppercase tracking-widest text-xs font-semibold text-primary/70">
                     Phone Number
                   </Label>
                   <Input
-                    id="phoneNumber"
                     value={formData.phoneNumber}
                     onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
                     placeholder="Enter phone number"
@@ -320,9 +335,7 @@ const AdminDashboard = () => {
 
                 {/* Date Picker */}
                 <div className="space-y-2">
-                  <Label 
-                    className="font-body uppercase tracking-widest text-xs font-semibold text-primary/70"
-                  >
+                  <Label className="font-body uppercase tracking-widest text-xs font-semibold text-primary/70">
                     Date
                   </Label>
                   <Popover open={dateOpen} onOpenChange={setDateOpen}>
@@ -334,7 +347,7 @@ const AdminDashboard = () => {
                       >
                         <CalendarIcon className="mr-2 h-4 w-4 text-primary/70" />
                         {formData.date ? (
-                          format(formData.date, 'MMM dd, yyyy')
+                          format(formData.date, 'dd/MM/yyyy')
                         ) : (
                           <span className="text-muted-foreground">Select date</span>
                         )}
@@ -357,9 +370,7 @@ const AdminDashboard = () => {
 
                 {/* Time Picker */}
                 <div className="space-y-2">
-                  <Label 
-                    className="font-body uppercase tracking-widest text-xs font-semibold text-primary/70"
-                  >
+                  <Label className="font-body uppercase tracking-widest text-xs font-semibold text-primary/70">
                     Time
                   </Label>
                   <Select
@@ -411,16 +422,103 @@ const AdminDashboard = () => {
             </form>
           </div>
 
+          {/* Filters Section */}
+          <div 
+            className="bg-card border border-primary/10 p-4 sm:p-6 mb-6 shadow-card animate-fade-in-up"
+            style={{ animationDelay: '0.25s' }}
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <Filter className="w-5 h-5 text-primary" strokeWidth={1.5} />
+              <h3 className="font-body font-semibold text-foreground">Search & Filters</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Name Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name..."
+                  value={searchName}
+                  onChange={(e) => setSearchName(e.target.value)}
+                  className="pl-10 rounded-none border-primary/20 font-body"
+                  data-testid="admin-search-name-input"
+                />
+              </div>
+
+              {/* Project Filter */}
+              <Select value={selectedProject} onValueChange={setSelectedProject}>
+                <SelectTrigger 
+                  className="rounded-none border-primary/20 font-body"
+                  data-testid="admin-project-filter"
+                >
+                  <SelectValue placeholder="All Projects" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-primary/20">
+                  <SelectItem value="all" className="font-body">All Projects</SelectItem>
+                  {projects.map((project) => (
+                    <SelectItem key={project} value={project} className="font-body">
+                      {project}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Date Filter */}
+              <Popover open={filterDateOpen} onOpenChange={setFilterDateOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal rounded-none border-primary/20 hover:bg-primary/5 font-body"
+                    data-testid="admin-date-filter-trigger"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4 text-primary/70" />
+                    {filterDate ? (
+                      format(filterDate, 'dd/MM/yyyy')
+                    ) : (
+                      <span className="text-muted-foreground">Filter by date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-card border-primary/20" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={filterDate}
+                    onSelect={(date) => {
+                      setFilterDate(date);
+                      setFilterDateOpen(false);
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+
+              {/* Clear Filters */}
+              {hasActiveFilters && (
+                <Button
+                  variant="outline"
+                  onClick={clearFilters}
+                  className="border-primary/30 text-primary hover:bg-primary/5 rounded-none font-body"
+                  data-testid="admin-clear-filters-btn"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Clear Filters
+                </Button>
+              )}
+            </div>
+          </div>
+
           {/* Leads Table */}
           <div 
             className="bg-card border border-primary/10 shadow-card animate-fade-in-up"
-            style={{ animationDelay: '0.25s' }}
+            style={{ animationDelay: '0.3s' }}
             data-testid="admin-leads-table-container"
           >
             <div className="flex items-center justify-between p-6 border-b border-primary/10">
               <div className="flex items-center gap-3">
                 <Users className="w-6 h-6 text-primary" strokeWidth={1.5} />
-                <h3 className="font-heading text-xl font-bold text-foreground">All Leads</h3>
+                <h3 className="font-heading text-xl font-bold text-foreground">
+                  All Leads ({filteredLeads.length} of {leads.length})
+                </h3>
               </div>
               <Button
                 variant="outline"
@@ -460,40 +558,6 @@ const AdminDashboard = () => {
                   Try Again
                 </Button>
               </div>
-            ) : leads.length === 0 ? (
-              <div>
-                <Table className="leads-table" data-testid="admin-leads-table">
-                  <TableHeader>
-                    <TableRow className="border-b-2 border-primary/20 hover:bg-transparent">
-                      <TableHead className="font-body uppercase tracking-widest text-xs font-semibold text-primary/70 py-4">
-                        Name
-                      </TableHead>
-                      <TableHead className="font-body uppercase tracking-widest text-xs font-semibold text-primary/70 py-4">
-                        Project Name
-                      </TableHead>
-                      <TableHead className="font-body uppercase tracking-widest text-xs font-semibold text-primary/70 py-4">
-                        Phone Number
-                      </TableHead>
-                      <TableHead className="font-body uppercase tracking-widest text-xs font-semibold text-primary/70 py-4">
-                        Date
-                      </TableHead>
-                      <TableHead className="font-body uppercase tracking-widest text-xs font-semibold text-primary/70 py-4">
-                        Time
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell colSpan={5} className="py-12 text-center">
-                        <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" strokeWidth={1} />
-                        <p className="text-muted-foreground font-body" data-testid="admin-no-leads-message">
-                          No leads found. Add your first lead above!
-                        </p>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </div>
             ) : (
               <Table className="leads-table" data-testid="admin-leads-table">
                 <TableHeader>
@@ -516,29 +580,49 @@ const AdminDashboard = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {leads.map((lead, index) => (
-                    <TableRow
-                      key={lead.id || index}
-                      className="border-b border-primary/5 hover:bg-primary/5 transition-colors duration-200"
-                      data-testid={`admin-lead-row-${index}`}
-                    >
-                      <TableCell className="font-body py-4 font-medium text-foreground">
-                        {lead.name || '-'}
-                      </TableCell>
-                      <TableCell className="font-body py-4 text-foreground">
-                        {lead.projectName || lead.project_name || lead.project || '-'}
-                      </TableCell>
-                      <TableCell className="font-body py-4 text-muted-foreground">
-                        {lead.phoneNumber || lead.phone_number || lead.phone || '-'}
-                      </TableCell>
-                      <TableCell className="font-body py-4 text-muted-foreground">
-                        {formatDate(lead.date)}
-                      </TableCell>
-                      <TableCell className="font-body py-4 text-muted-foreground">
-                        {formatTime(lead.time)}
+                  {filteredLeads.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="py-12 text-center">
+                        <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" strokeWidth={1} />
+                        <p className="text-muted-foreground font-body" data-testid="admin-no-leads-message">
+                          {hasActiveFilters ? 'No leads match your filters.' : 'No leads found. Add your first lead above!'}
+                        </p>
+                        {hasActiveFilters && (
+                          <Button
+                            variant="outline"
+                            onClick={clearFilters}
+                            className="mt-4 border-primary/30 text-primary hover:bg-primary/5 rounded-none"
+                          >
+                            Clear Filters
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    filteredLeads.map((lead, index) => (
+                      <TableRow
+                        key={lead.id || index}
+                        className="border-b border-primary/5 hover:bg-primary/5 transition-colors duration-200"
+                        data-testid={`admin-lead-row-${index}`}
+                      >
+                        <TableCell className="font-body py-4 font-medium text-foreground">
+                          {lead.name || '-'}
+                        </TableCell>
+                        <TableCell className="font-body py-4 text-foreground">
+                          {lead.projectName || '-'}
+                        </TableCell>
+                        <TableCell className="font-body py-4 text-muted-foreground">
+                          {lead.phoneNumber || '-'}
+                        </TableCell>
+                        <TableCell className="font-body py-4 text-muted-foreground">
+                          {formatDate(lead.date)}
+                        </TableCell>
+                        <TableCell className="font-body py-4 text-muted-foreground">
+                          {formatTime(lead.time)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             )}
